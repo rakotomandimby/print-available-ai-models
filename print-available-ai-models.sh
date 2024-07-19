@@ -18,8 +18,8 @@ gemini_models=$(get_gemini_models)
 max_length=$(( $(echo "$openai_models" | wc -l) > $(echo "$gemini_models" | wc -l) ? $(echo "$openai_models" | wc -l) : $(echo "$gemini_models" | wc -l) ))
 
 # Print the headers
-printf "%-40s | %s\n" "Available OpenAI Models" "Available Gemini Models"
-printf "%-40s | %s\n" "------------------------" "------------------------"
+printf " %-30s | %s\n" "Available OpenAI Models" "Available Gemini Models"
+printf " %-30s | %s\n" "                        " "                        "
 
 # Iterate through the models and print them side by side
 for i in $(seq 1 $max_length); do
@@ -28,5 +28,5 @@ for i in $(seq 1 $max_length); do
   gemini_model=$(echo "$gemini_models" | sed -n "${i}p" 2>/dev/null || echo "")
 
   # Print the models side by side
-  printf "%-40s | %s\n" "$openai_model" "$gemini_model"
+  printf " %-30s | %s\n" "$openai_model" "$gemini_model"
 done
