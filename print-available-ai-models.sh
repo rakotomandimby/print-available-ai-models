@@ -7,7 +7,7 @@ get_openai_models() {
 
 # Function to fetch and format Gemini models
 get_gemini_models() {
-  curl -s -H "x-goog-api-key: ${GEMINI_API_KEY}"  https://generativelanguage.googleapis.com/v1/models | jq -r '.models[].name'
+  curl -s -H "x-goog-api-key: ${GEMINI_API_KEY}"  https://generativelanguage.googleapis.com/v1beta/models | jq -r '.models[].name'
 }
 
 # Get the models
