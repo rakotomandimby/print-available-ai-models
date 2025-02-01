@@ -19,6 +19,5 @@ printf " %-50s | %s\n" "                        " "                        "
 for i in $(seq 1 $max_length); do
   openai_model=$(echo "$openai_models" | sed -n "${i}p" 2>/dev/null || echo "")
   gemini_model=$(echo "$gemini_models" | sed -n "${i}p" 2>/dev/null || echo "")
-
   printf " %-50s | %s\n" "$openai_model" "$gemini_model"
 done
