@@ -1,23 +1,90 @@
-#!/usr/bin/env bash
+#!/bin/bash
+set -e
+set -o pipefail
 
-get_openai_models() {
-  curl -s -H "Authorization: Bearer $OPENAI_API_KEY" https://api.openai.com/v1/models | jq -r '.data[]  | .id' | sort
-}
+if ! command -v curl &> /dev/null; then
+    echo "Error: curl is not installed. Please install it." >&2
+    exit 1
+fi
+if ! command -v jq &> /dev/null; then
+    echo "Error: jq is not installed. Please install it (e.g., 'sudo apt install jq' or 'brew install jq')." >&2
+    exit 1
+fi
 
-get_gemini_models() {
-  curl -s -H "x-goog-api-key: ${GEMINI_API_KEY}"  https://generativelanguage.googleapis.com/v1beta/models | jq -r '.models[].name' | sort
-}
+# --- Fetch OpenAI Models ---
+openai_models=""
+if [[ -n "$OPENAI_API_KEY" ]]; then
+    echo "Fetching OpenAI models..." >&2
+    # Use v1/models endpoint
+    openai_response=$(curl --silent --show-error -X GET "https://api.openai.com/v1/models" \
+      -H "Authorization: Bearer $OPENAI_API_KEY")
 
-openai_models=$(get_openai_models)
-gemini_models=$(get_gemini_models)
+    # Check if curl command was successful and response is valid JSON
+    if [[ $? -eq 0 ]] && jq -e . >/dev/null 2>&1 <<<"$openai_response"; then
+        openai_models=$(echo "$openai_response" | jq -r '.data[] | .id' | sort)
+    else
+        echo "Warning: Failed to fetch or parse OpenAI models. Check API key or network." >&2
+        # Optionally add specific error details from openai_response if it contains error messages
+        # echo "OpenAI Response: $openai_response" >&2
+    fi
+else
+    echo "Info: OPENAI_API_KEY not set. Skipping OpenAI models." >&2
+fi
 
-max_length=$(( $(echo "$openai_models" | wc -l) > $(echo "$gemini_models" | wc -l) ? $(echo "$openai_models" | wc -l) : $(echo "$gemini_models" | wc -l) ))
+# --- Fetch Gemini Models ---
+gemini_models=""
+if [[ -n "$GEMINI_API_KEY" ]]; then
+    echo "Fetching Gemini models..." >&2
+    # Use v1beta/models endpoint
+    gemini_response=$(curl --silent --show-error -H 'Content-Type: application/json' \
+        "https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}")
 
-printf " %-50s | %s\n" "Available OpenAI Models" "Available Gemini Models"
-printf " %-50s | %s\n" "                        " "                        "
+    # Check if curl command was successful and response is valid JSON
+    if [[ $? -eq 0 ]] && jq -e . >/dev/null 2>&1 <<<"$gemini_response"; then
+        # Filter for models supporting 'generateContent' and extract name (remove 'models/')
+        gemini_models=$(echo "$gemini_response" | jq -r '.models[] | select(.supportedGenerationMethods[] | contains("generateContent")) | .name' | sed 's/^models\///' | sort)
+    else
+        echo "Warning: Failed to fetch or parse Gemini models. Check API key or network." >&2
+        # echo "Gemini Response: $gemini_response" >&2
+    fi
+else
+    echo "Info: GEMINI_API_KEY not set. Skipping Gemini models." >&2
+fi
 
-for i in $(seq 1 $max_length); do
-  openai_model=$(echo "$openai_models" | sed -n "${i}p" 2>/dev/null || echo "")
-  gemini_model=$(echo "$gemini_models" | sed -n "${i}p" 2>/dev/null || echo "")
-  printf " %-50s | %s\n" "$openai_model" "$gemini_model"
+# --- Fetch Anthropic Models ---
+anthropic_models=""
+if [[ -n "$ANTHROPIC_API_KEY" ]]; then
+    echo "Fetching Anthropic models..." >&2
+    anthropic_response=$(curl --silent --show-error "https://api.anthropic.com/v1/models" \
+         --header "x-api-key: $ANTHROPIC_API_KEY" \
+         --header "anthropic-version: 2023-06-01")
+
+    # Check if curl command was successful and response is valid JSON
+    if [[ $? -eq 0 ]] && jq -e . >/dev/null 2>&1 <<<"$anthropic_response"; then
+        anthropic_models=$(echo "$anthropic_response" | jq -r '.data[].id' | sort)
+    else
+        echo "Warning: Failed to fetch or parse Anthropic models. Check API key or network." >&2
+        # echo "Anthropic Response: $anthropic_response" >&2
+    fi
+else
+    echo "Info: ANTHROPIC_API_KEY not set. Skipping Anthropic models." >&2
+fi
+
+
+# --- Display Models ---
+echo # Add a newline for better separation
+
+# Print header
+printf "%-40s %-40s %-40s\n" "OpenAI Models" "Gemini Models" "Anthropic Models"
+printf "%-40s %-40s %-40s\n" "----------------------------------------" "----------------------------------------" "----------------------------------------"
+
+# Use paste to combine the model lists side-by-side
+# Process substitution <(...) is used to treat the command output as a file
+paste <(echo "$openai_models") <(echo "$gemini_models") <(echo "$anthropic_models") | while IFS=$'\t' read -r openai gemini anthropic; do
+  printf "%-40s %-40s %-40s\n" "$openai" "$gemini" "$anthropic"
 done
+
+echo # Add a final newline
+
+exit 0
+
