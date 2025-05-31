@@ -33,11 +33,11 @@ fi
 
 # --- Fetch Gemini Models ---
 gemini_models=""
-if [[ -n "$GEMINI_API_KEY" ]]; then
+if [[ -n "$GOOGLEAI_API_KEY" ]]; then
     echo "Fetching Gemini models..." >&2
     # Use v1beta/models endpoint
     gemini_response=$(curl --silent --show-error -H 'Content-Type: application/json' \
-        "https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}")
+        "https://generativelanguage.googleapis.com/v1beta/models?key=${GOOGLEAI_API_KEY}")
 
     # Check if curl command was successful and response is valid JSON
     if [[ $? -eq 0 ]] && jq -e . >/dev/null 2>&1 <<<"$gemini_response"; then
@@ -48,7 +48,7 @@ if [[ -n "$GEMINI_API_KEY" ]]; then
         # echo "Gemini Response: $gemini_response" >&2
     fi
 else
-    echo "Info: GEMINI_API_KEY not set. Skipping Gemini models." >&2
+    echo "Info: GOOGLEAI_API_KEY not set. Skipping Gemini models." >&2
 fi
 
 # --- Fetch Anthropic Models ---
