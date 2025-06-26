@@ -31,24 +31,23 @@ else
     echo "Info: OPENAI_API_KEY not set. Skipping OpenAI models." >&2
 fi
 
-# --- Fetch Gemini Models ---
-gemini_models=""
+# --- Fetch Google AI Models ---
+googleai_models=""
 if [[ -n "$GOOGLEAI_API_KEY" ]]; then
-    echo "Fetching Gemini models..." >&2
+    echo "Fetching Google AI models..." >&2
     # Use v1beta/models endpoint
-    gemini_response=$(curl --silent --show-error -H 'Content-Type: application/json' \
+    googleai_response=$(curl --silent --show-error -H 'Content-Type: application/json' \
         "https://generativelanguage.googleapis.com/v1beta/models?key=${GOOGLEAI_API_KEY}")
 
     # Check if curl command was successful and response is valid JSON
-    if [[ $? -eq 0 ]] && jq -e . >/dev/null 2>&1 <<<"$gemini_response"; then
+    if [[ $? -eq 0 ]] && jq -e . >/dev/null 2>&1 <<<"$googleai_response"; then
         # Filter for models supporting 'generateContent' and extract name (remove 'models/')
-        gemini_models=$(echo "$gemini_response" | jq -r '.models[] | select(.supportedGenerationMethods[] | contains("generateContent")) | .name' | sed 's/^models\///' | sort)
+        googleai_models=$(echo "$googleai_response" | jq -r '.models[] | select(.supportedGenerationMethods[] | contains("generateContent")) | .name' | sed 's/^models\///' | sort)
     else
-        echo "Warning: Failed to fetch or parse Gemini models. Check API key or network." >&2
-        # echo "Gemini Response: $gemini_response" >&2
+        echo "Warning: Failed to fetch or parse Google AI models. Check API key or network." >&2
     fi
 else
-    echo "Info: GOOGLEAI_API_KEY not set. Skipping Gemini models." >&2
+    echo "Info: GOOGLEAI_API_KEY not set. Skipping GoogleAI models." >&2
 fi
 
 # --- Fetch Anthropic Models ---
@@ -75,13 +74,13 @@ fi
 echo # Add a newline for better separation
 
 # Print header
-printf "%-40s %-40s %-40s\n" "OpenAI Models" "Gemini Models" "Anthropic Models"
+printf "%-40s %-40s %-40s\n" "OpenAI Models" "GoogleAI Models" "Anthropic Models"
 printf "%-40s %-40s %-40s\n" "----------------------------------------" "----------------------------------------" "----------------------------------------"
 
 # Use paste to combine the model lists side-by-side
 # Process substitution <(...) is used to treat the command output as a file
-paste <(echo "$openai_models") <(echo "$gemini_models") <(echo "$anthropic_models") | while IFS=$'\t' read -r openai gemini anthropic; do
-  printf "%-40s %-40s %-40s\n" "$openai" "$gemini" "$anthropic"
+paste <(echo "$openai_models") <(echo "$googleai_models") <(echo "$anthropic_models") | while IFS=$'\t' read -r openai googleai anthropic; do
+  printf "%-40s %-40s %-40s\n" "$openai" "$googleai" "$anthropic"
 done
 
 echo # Add a final newline
